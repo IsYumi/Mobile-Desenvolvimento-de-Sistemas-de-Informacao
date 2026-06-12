@@ -1,6 +1,9 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/Materia.css";
+import "../../styles/Materia.css";
+
+// Importa a função para criar documentos no Firestore
+import { create } from "../../service/firestoreService";
 
 export default function Materia() {
   const navigate = useNavigate();
@@ -10,29 +13,29 @@ export default function Materia() {
   const [descricao, setDescricao] = useState("");
   const [imagem, setImagem] = useState("");
   const [imagemNome, setImagemNome] = useState("");
+  const [loading, setLoading] = useState(false); // Estado para evitar duplo clique
 
   const buttonAdicionarMateria = async () => {
+    // Validação básica
+    if (!nome) {
+      alert("Por favor, preencha pelo menos o nome da matéria.");
+      return;
+    }
+
     try {
-      const resposta = await fetch("http://localhost:3333/materia/add", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          nome,
-          descricao,
-          imagem,
-        }),
+      setLoading(true);
+
+      // Salva a matéria na coleção "materias" no Firestore
+      // (Mantivemos a lógica de salvar apenas o nome da imagem como string por enquanto)
+      const idGerado = await create("materias", {
+        nome: nome,
+        descricao: descricao,
+        imagem_caminho: imagem,
+        dataCriacao: new Date().toISOString(),
       });
 
-      if (!resposta.ok) {
-        const erro = await resposta.text();
-        console.error("Erro ao adicionar matéria:", resposta.status, erro);
-        return;
-      }
+      console.log("Matéria adicionada com ID:", idGerado);
 
-      const data = await resposta.json();
-      console.log("Matéria adicionada:", data);
       setNome("");
       setDescricao("");
       setImagem("");
@@ -40,6 +43,9 @@ export default function Materia() {
       alert("Matéria adicionada com sucesso!");
     } catch (error) {
       console.error("Erro ao adicionar matéria:", error);
+      alert("Erro ao adicionar a matéria no banco de dados.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -49,6 +55,7 @@ export default function Materia() {
 
   const handleImagemChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+
     if (file) {
       setImagem(file.name);
       setImagemNome(file.name);
@@ -72,6 +79,7 @@ export default function Materia() {
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             placeholder="Nome da matéria"
+            disabled={loading}
           />
         </div>
 
@@ -82,6 +90,7 @@ export default function Materia() {
             value={descricao}
             onChange={(e) => setDescricao(e.target.value)}
             placeholder="Descrição breve"
+            disabled={loading}
           />
         </div>
 
@@ -92,6 +101,7 @@ export default function Materia() {
               type="button"
               className="image-select-button"
               onClick={handleSelectImage}
+              disabled={loading}
             >
               INSERIR IMAGEM
             </button>
@@ -107,8 +117,12 @@ export default function Materia() {
         </div>
 
         <div className="confirm-button-row">
-          <button className="btn-confirmar" onClick={buttonAdicionarMateria}>
-            CONFIRMAR
+          <button
+            className="btn-confirmar"
+            onClick={buttonAdicionarMateria}
+            disabled={loading}
+          >
+            {loading ? "SALVANDO..." : "CONFIRMAR"}
           </button>
         </div>
       </div>

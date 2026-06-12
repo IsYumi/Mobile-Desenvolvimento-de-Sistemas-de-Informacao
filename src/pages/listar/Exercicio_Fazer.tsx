@@ -1,21 +1,17 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
-import { apiGet } from "../../service/api";
-import "../styles/Exercicio_Fazer.css";
+import "../../styles/Exercicio_Fazer.css";
+
+// Importa a função de leitura do Firestore
+import { getById } from "../../service/firestoreService";
 
 interface Exercicio {
-  id: number;
+  id: string; // Atualizado para string (formato do Firebase)
   titulo: string;
   pergunta: string;
   resposta: string;
-  nivel: number;
-}
-
-interface RespostaExercicioUnico {
-  ok: boolean;
-  exercicio?: Exercicio;
-  mensagem?: string;
+  nivel: string | number; // Atualizado para aceitar as strings "Básico", "Intermediário", etc.
 }
 
 export default function Exercicio_Fazer() {
@@ -39,20 +35,17 @@ export default function Exercicio_Fazer() {
         setCarregando(true);
         setErro(null);
 
-        // A rota de GET por ID no backend usa query params (?id=X)
-        const dados = await apiGet<RespostaExercicioUnico>(
-          `/exercicio/get?id=${id}`,
-        );
+        // Busca o exercício diretamente na coleção "exercicios" no Firestore
+        const dados = await getById("exercicios", id);
 
-        if (dados && dados.ok && dados.exercicio) {
-          setExercicio(dados.exercicio);
+        if (dados) {
+          setExercicio(dados as Exercicio);
         } else {
-          throw new Error(
-            dados?.mensagem || "Não foi possível carregar o exercício.",
-          );
+          throw new Error("Não foi possível carregar o exercício.");
         }
       } catch (err: any) {
-        setErro(err.message || "Erro ao buscar o exercício.");
+        console.error("Erro ao buscar o exercício:", err);
+        setErro(err.message || "Erro ao buscar o exercício no banco de dados.");
       } finally {
         setCarregando(false);
       }
@@ -70,6 +63,8 @@ export default function Exercicio_Fazer() {
 
     if (respostaDigitada === respostaCerta) {
       alert("Correto! Parabéns, você acertou!");
+      // Opcional: Se quiser que o app volte para a lista de exercícios automaticamente ao acertar:
+      // navigate(-1);
     } else {
       alert(`Errado!\n\nA resposta certa era: ${exercicio.resposta}`);
     }
@@ -82,7 +77,7 @@ export default function Exercicio_Fazer() {
     <div className="home-container">
       <Navbar />
 
-      <div className="content">
+      <div className="content" style={{ paddingTop: "100px" }}>
         <div className="exercicio-fazer-cabecalho">
           <button className="botao-voltar" onClick={() => navigate(-1)}>
             ← Voltar
@@ -93,7 +88,7 @@ export default function Exercicio_Fazer() {
         </div>
 
         {carregando && (
-          <p className="status-mensagem">Carregando exercício...</p>
+          <p className="status-mensagem">A carregar exercício...</p>
         )}
 
         {erro && (
@@ -119,7 +114,7 @@ export default function Exercicio_Fazer() {
                 type="text"
                 value={respostaUsuario}
                 onChange={(e) => setRespostaUsuario(e.target.value)}
-                placeholder="Digite a resposta aqui..."
+                placeholder="Escreva a resposta aqui..."
                 onKeyDown={(e) => e.key === "Enter" && handleConfirmar()}
               />
             </div>

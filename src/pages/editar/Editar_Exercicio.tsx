@@ -1,7 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Navbar from "../../components/Navbar";
 
-export default function Exercicio() {
+// Importa as funções de Update e Delete do Firestore
+import { update, remove } from "../../service/firestoreService";
+
+export default function Editar_Exercicio() {
   const navigate = useNavigate();
 
   const [id, setId] = useState("");
@@ -11,127 +15,267 @@ export default function Exercicio() {
   const [resposta, setResposta] = useState("");
   const [nivel, setNivel] = useState("");
 
-  const buttonRemoverExercicio = async () => {
-    try {
-      const resposta = await fetch("http://localhost:3333/exercicio/delete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: id,
-        }),
-      });
-      if (!resposta.ok) {
-        const erro = await resposta.text();
-        console.error("Erro ao deletar materia:", resposta.status, erro);
-        return;
-      }
-    } catch (error) {
-      console.error("Erro ao remover exercício:", error);
+  const [loading, setLoading] = useState(false);
+
+  const buttonEditarExercicio = async () => {
+    if (!id) {
+      alert("Por favor, informe o ID do exercício que deseja editar.");
+      return;
     }
-  };
 
-  const buttonAdicionarExercicio = async () => {
     try {
-      const respostaApi = await fetch(
-        "http://localhost:3333/exercicio/update",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            id: id,
-            pacote_id: pacote_id,
-            titulo: titulo,
-            pergunta: pergunta,
-            resposta: resposta,
-            nivel: nivel,
-          }),
-        },
-      );
+      setLoading(true);
 
-      if (!respostaApi.ok) {
-        const erro = await respostaApi.text();
-        console.error("Erro ao atualizar exercício:", respostaApi.status, erro);
-        return;
-      }
+      // Atualiza o documento na coleção "exercicios"
+      await update("exercicios", id, {
+        pacote_id: pacote_id,
+        titulo: titulo,
+        pergunta: pergunta,
+        resposta: resposta,
+        nivel: nivel,
+        dataAtualizacao: new Date().toISOString(),
+      });
 
-      const data = await respostaApi.json();
-      console.log("Exercício atualizado:", data);
+      console.log("Exercício alterado:", id);
+
+      // Limpa os campos de texto após a edição
       setPacoteId("");
       setTitulo("");
       setPergunta("");
       setResposta("");
       setNivel("");
-      alert("Exercício atualizado com sucesso!");
+
+      alert("Exercício alterado com sucesso!");
     } catch (error) {
-      console.error("Erro ao atualizar exercício:", error);
+      console.error("Erro ao alterar exercício:", error);
+      alert("Erro ao alterar o exercício. Verifique se o ID está correto.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const buttonDeletarExercicio = async () => {
+    if (!id) {
+      alert("Por favor, informe o ID do exercício que deseja deletar.");
+      return;
+    }
+
+    if (
+      window.confirm(
+        "Tem a certeza que deseja DELETAR este exercício permanentemente?",
+      )
+    ) {
+      try {
+        setLoading(true);
+
+        // Remove o documento da coleção "exercicios"
+        await remove("exercicios", id);
+
+        console.log("Exercício removido:", id);
+
+        // Limpa tudo
+        setId("");
+        setPacoteId("");
+        setTitulo("");
+        setPergunta("");
+        setResposta("");
+        setNivel("");
+
+        alert("Exercício removido com sucesso!");
+      } catch (error) {
+        console.error("Erro ao remover exercício:", error);
+        alert("Erro ao remover. Verifique se o ID está correto.");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
   return (
-    <div>
-      <div className="form-container">
+    <>
+      {/* Adicionei a Navbar para manter a consistência visual com as outras páginas de edição */}
+      <Navbar />
+
+      <div
+        className="form-container"
+        style={{ paddingTop: "100px", maxWidth: "800px", margin: "0 auto" }}
+      >
+        <div
+          className="materia-header"
+          style={{
+            marginBottom: "20px",
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
+          <h1>EDITAR EXERCÍCIO</h1>
+          <button
+            onClick={() => navigate(-1)}
+            style={{
+              padding: "10px 20px",
+              background: "#ff9d94",
+              border: "none",
+              borderRadius: "10px",
+              fontWeight: "bold",
+              cursor: "pointer",
+            }}
+          >
+            VOLTAR
+          </button>
+        </div>
+
         <div className="form-row">
-          <div className="form-group">
-            <label>ID do Exercício</label>
-            <input
-              type="integer"
-              name="id"
-              value={id}
-              onChange={(e) => setId(e.target.value)}
-            />
-            <label>ID do Pacote</label>
-            <input
-              type="integer"
-              name="pacote_id"
-              value={pacote_id}
-              onChange={(e) => setPacoteId(e.target.value)}
-            />
-            <label>TÍTULO</label>
-            <input
-              type="text"
-              name="titulo"
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-            />
-            <label>PERGUNTA</label>
-            <input
-              type="text"
-              name="pergunta"
-              value={pergunta}
-              onChange={(e) => setPergunta(e.target.value)}
-            />
-            <label>RESPOSTA</label>
-            <input
-              type="text"
-              name="resposta"
-              value={resposta}
-              onChange={(e) => setResposta(e.target.value)}
-            />
-            <label>NÍVEL</label>
-            <input
-              type="integer"
-              name="nivel"
-              value={nivel}
-              onChange={(e) => setNivel(e.target.value)}
-            />
+          <div
+            className="form-group"
+            style={{ display: "flex", flexDirection: "column", gap: "15px" }}
+          >
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <label style={{ fontWeight: "bold", marginBottom: "5px" }}>
+                ID DO EXERCÍCIO
+              </label>
+              <input
+                type="text"
+                name="id"
+                value={id}
+                onChange={(e) => setId(e.target.value)}
+                placeholder="ID gerado no Firebase"
+                disabled={loading}
+                style={{
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <label style={{ fontWeight: "bold", marginBottom: "5px" }}>
+                ID DO PACOTE VINCULADO
+              </label>
+              <input
+                type="text"
+                name="pacote_id"
+                value={pacote_id}
+                onChange={(e) => setPacoteId(e.target.value)}
+                disabled={loading}
+                style={{
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <label style={{ fontWeight: "bold", marginBottom: "5px" }}>
+                TÍTULO
+              </label>
+              <input
+                type="text"
+                name="titulo"
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value)}
+                disabled={loading}
+                style={{
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <label style={{ fontWeight: "bold", marginBottom: "5px" }}>
+                PERGUNTA
+              </label>
+              <input
+                type="text"
+                name="pergunta"
+                value={pergunta}
+                onChange={(e) => setPergunta(e.target.value)}
+                disabled={loading}
+                style={{
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <label style={{ fontWeight: "bold", marginBottom: "5px" }}>
+                RESPOSTA
+              </label>
+              <input
+                type="text"
+                name="resposta"
+                value={resposta}
+                onChange={(e) => setResposta(e.target.value)}
+                disabled={loading}
+                style={{
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <label style={{ fontWeight: "bold", marginBottom: "5px" }}>
+                NÍVEL
+              </label>
+              <input
+                type="text"
+                name="nivel"
+                value={nivel}
+                onChange={(e) => setNivel(e.target.value)}
+                disabled={loading}
+                style={{
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
+                }}
+              />
+            </div>
           </div>
-          <div className="buttons-container">
+
+          <div
+            className="buttons-container"
+            style={{ display: "flex", gap: "15px", marginTop: "20px" }}
+          >
             <button
-              className="btn-adicionar"
-              onClick={buttonAdicionarExercicio}
+              onClick={buttonEditarExercicio}
+              disabled={loading}
+              style={{
+                flex: 1,
+                padding: "15px",
+                background: "#63ff96",
+                border: "none",
+                borderRadius: "10px",
+                fontWeight: "bold",
+                cursor: "pointer",
+              }}
             >
-              ADICIONAR EXERCÍCIO
+              {loading ? "A PROCESSAR..." : "CONFIRMAR ALTERAÇÕES"}
             </button>
-            <button className="btn-remover" onClick={buttonRemoverExercicio}>
+            <button
+              onClick={buttonDeletarExercicio}
+              disabled={loading}
+              style={{
+                flex: 1,
+                padding: "15px",
+                background: "#ff9d94",
+                border: "none",
+                borderRadius: "10px",
+                fontWeight: "bold",
+                cursor: "pointer",
+              }}
+            >
               REMOVER EXERCÍCIO
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

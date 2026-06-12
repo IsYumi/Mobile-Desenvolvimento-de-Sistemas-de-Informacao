@@ -1,13 +1,17 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
-import "../styles/Editar_Pacote.css";
+import "../../styles/Editar_Pacote.css";
+
+// Importa as funções de Update e Delete do Firestore
+import { update, remove } from "../../service/firestoreService";
 
 export default function Editar_Pacote() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [id, setId] = useState("");
+  // Nota: Baseado na sua estrutura original, 'nome' recebe o ID da Matéria e 'topico' recebe o Nome do Pacote
   const [nome, setNome] = useState("");
   const [topico, setTopico] = useState("");
   const [nivel, setNivel] = useState("Básico");
@@ -16,30 +20,29 @@ export default function Editar_Pacote() {
   const [imagemNome, setImagemNome] = useState("");
   const [questao, setQuestao] = useState("");
 
-  const buttonAdicionarPacote = async () => {
+  const [loading, setLoading] = useState(false);
+
+  const buttonEditarPacote = async () => {
+    if (!id) {
+      alert("Por favor, informe o ID do pacote que deseja editar.");
+      return;
+    }
+
     try {
-      const resposta = await fetch("http://localhost:3333/pacote/update", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: id,
-          materia_id: nome,
-          nome: topico,
-          descricao: descricao,
-          imagem_caminho: imagem,
-        }),
+      setLoading(true);
+
+      // Atualiza o documento na coleção "pacotes" onde o documento = id
+      await update("pacotes", id, {
+        materia_id: nome,
+        nome: topico,
+        nivel: nivel,
+        descricao: descricao,
+        imagem_caminho: imagem,
+        questao: questao, // Salva o campo da text-area também
+        dataAtualizacao: new Date().toISOString(),
       });
 
-      if (!resposta.ok) {
-        const erro = await resposta.text();
-        console.error("Erro ao alterar pacote:", resposta.status, erro);
-        return;
-      }
-
-      const data = await resposta.json();
-      console.log("Pacote alterado:", data);
+      console.log("Pacote alterado:", id);
       setNome("");
       setTopico("");
       setNivel("Básico");
@@ -50,40 +53,45 @@ export default function Editar_Pacote() {
       alert("Pacote alterado com sucesso!");
     } catch (error) {
       console.error("Erro ao alterar pacote:", error);
+      alert("Erro ao alterar o pacote. Verifique se o ID está correto.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const buttondeletarPacote = async () => {
-    try {
-      const resposta = await fetch("http://localhost:3333/pacote/delete", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: id,
-        }),
-      });
+  const buttonDeletarPacote = async () => {
+    if (!id) {
+      alert("Por favor, informe o ID do pacote que deseja deletar.");
+      return;
+    }
 
-      if (!resposta.ok) {
-        const erro = await resposta.text();
-        console.error("Erro ao deletar pacote:", resposta.status, erro);
-        return;
+    if (
+      window.confirm(
+        "Tem certeza que deseja DELETAR este pacote permanentemente?",
+      )
+    ) {
+      try {
+        setLoading(true);
+
+        // Remove o documento da coleção "pacotes"
+        await remove("pacotes", id);
+
+        console.log("Pacote deletado:", id);
+        setId("");
+        setNome("");
+        setTopico("");
+        setNivel("Básico");
+        setDescricao("");
+        setImagem("");
+        setImagemNome("");
+        setQuestao("");
+        alert("Pacote deletado com sucesso!");
+      } catch (error) {
+        console.error("Erro ao deletar pacote:", error);
+        alert("Erro ao deletar. Verifique se o ID está correto.");
+      } finally {
+        setLoading(false);
       }
-
-      const data = await resposta.json();
-      console.log("Pacote deletado:", data);
-      setId("");
-      setNome("");
-      setTopico("");
-      setNivel("Básico");
-      setDescricao("");
-      setImagem("");
-      setImagemNome("");
-      setQuestao("");
-      alert("Pacote deletado com sucesso!");
-    } catch (error) {
-      console.error("Erro ao deletar pacote:", error);
     }
   };
 
@@ -93,6 +101,7 @@ export default function Editar_Pacote() {
 
   const handleImagemChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+
     if (file) {
       setImagem(file.name);
       setImagemNome(file.name);
@@ -117,26 +126,29 @@ export default function Editar_Pacote() {
               type="text"
               value={id}
               onChange={(e) => setId(e.target.value)}
-              placeholder="ID do pacote"
+              placeholder="ID do pacote (Gerado no Firebase)"
+              disabled={loading}
             />
           </div>
           <div className="field-group">
-            <label>NOME</label>
+            <label>ID DA MATÉRIA</label>
             <input
               type="text"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              placeholder="Id da matéria"
+              placeholder="Id da matéria vinculada"
+              disabled={loading}
             />
           </div>
 
           <div className="field-group">
-            <label>TÓPICO</label>
+            <label>TÓPICO (NOME DO PACOTE)</label>
             <input
               type="text"
               value={topico}
               onChange={(e) => setTopico(e.target.value)}
-              placeholder="nome da matéria"
+              placeholder="Nome do pacote/tópico"
+              disabled={loading}
             />
           </div>
 
@@ -150,6 +162,7 @@ export default function Editar_Pacote() {
                   value="Básico"
                   checked={nivel === "Básico"}
                   onChange={() => setNivel("Básico")}
+                  disabled={loading}
                 />
                 BÁSICO
               </label>
@@ -160,6 +173,7 @@ export default function Editar_Pacote() {
                   value="Intermediário"
                   checked={nivel === "Intermediário"}
                   onChange={() => setNivel("Intermediário")}
+                  disabled={loading}
                 />
                 INTERMEDIÁRIO
               </label>
@@ -170,6 +184,7 @@ export default function Editar_Pacote() {
                   value="Avançado"
                   checked={nivel === "Avançado"}
                   onChange={() => setNivel("Avançado")}
+                  disabled={loading}
                 />
                 AVANÇADO
               </label>
@@ -183,6 +198,7 @@ export default function Editar_Pacote() {
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
               placeholder="Descrição breve"
+              disabled={loading}
             />
           </div>
 
@@ -193,6 +209,7 @@ export default function Editar_Pacote() {
                 type="button"
                 className="image-select-button"
                 onClick={handleSelectImage}
+                disabled={loading}
               >
                 INSERIR IMAGEM
               </button>
@@ -208,22 +225,28 @@ export default function Editar_Pacote() {
           </div>
 
           <div className="text-area-group field-group">
-            <label>DESCRIÇÃO</label>
+            <label>QUESTÃO / ATIVIDADE</label>
             <textarea
               value={questao}
               onChange={(e) => setQuestao(e.target.value)}
               placeholder="Descreva a questão ou atividade"
+              disabled={loading}
             />
           </div>
 
           <div className="confirm-button-row">
-            <button className="btn-confirmar" onClick={buttonAdicionarPacote}>
-              CONFIRMAR
+            <button
+              className="btn-confirmar"
+              onClick={buttonEditarPacote}
+              disabled={loading}
+            >
+              {loading ? "PROCESSANDO..." : "CONFIRMAR"}
             </button>
             <button
               className="btn-deletar"
               type="button"
-              onClick={buttondeletarPacote}
+              onClick={buttonDeletarPacote}
+              disabled={loading}
             >
               DELETAR
             </button>

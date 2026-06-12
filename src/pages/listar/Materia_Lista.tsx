@@ -1,26 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import "../styles/Materia.css";
+import "../../styles/Materia_Lista.css";
 import Navbar from "../../components/Navbar";
-import { apiGet } from "../../service/api";
+
+// Importações do Firebase e do nosso Serviço
+import { db } from "../../service/firebaseConfig";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { getById } from "../../service/firestoreService";
 
 interface Pacote {
-  id: string | number;
+  id: string; // IDs no Firebase são strings
   nome: string;
   descricao?: string;
-}
-
-interface RespostaPacotes {
-  ok: boolean;
-  pacotes: Pacote[];
-}
-
-interface RespostaMateria {
-  ok: boolean;
-  materia: {
-    id: number | string;
-    nome: string;
-  };
 }
 
 export default function Materia_Usuario() {
@@ -44,29 +35,32 @@ export default function Materia_Usuario() {
         setCarregando(true);
         setErro(null);
 
-        // 1. Busca a lista de pacotes
-        const dadosPacotes = await apiGet<RespostaPacotes>(`/pacote/get/${id}`);
-
-        if (dadosPacotes && dadosPacotes.ok) {
-          setPacotes(dadosPacotes.pacotes || []);
-        } else {
-          throw new Error("Falha ao carregar pacotes.");
-        }
-
-        // 2. Busca as informações da Matéria para o cabeçalho
+        // 1. Busca as informações da Matéria para o cabeçalho
         try {
-          const dadosMateria = await apiGet<RespostaMateria>(
-            `/materia/get/${id}`,
-          );
-
-          if (dadosMateria && dadosMateria.ok && dadosMateria.materia) {
-            setNomeMateria(dadosMateria.materia.nome);
+          const dadosMateria: any = await getById("materias", id);
+          if (dadosMateria && dadosMateria.nome) {
+            setNomeMateria(dadosMateria.nome);
           } else {
             setNomeMateria("Matéria Sem Nome");
           }
         } catch (err) {
+          console.error("Erro ao carregar matéria:", err);
           setNomeMateria("Erro ao Carregar Nome");
         }
+
+        // 2. Busca a lista de pacotes filtrando pelo ID da matéria
+        const q = query(
+          collection(db, "pacotes"),
+          where("materia_id", "==", id),
+        );
+
+        const querySnapshot = await getDocs(q);
+        const dadosPacotes = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Pacote[];
+
+        setPacotes(dadosPacotes);
       } catch (err: any) {
         console.error("Erro ao buscar dados:", err);
         setErro(err.message || "Não foi possível carregar os dados.");
@@ -82,7 +76,7 @@ export default function Materia_Usuario() {
     <div className="home-container">
       <Navbar />
 
-      <div className="content">
+      <div className="content" style={{ paddingTop: "100px" }}>
         {/* CABEÇALHO DA MATÉRIA */}
         <div
           className="materia-cabecalho"
@@ -96,7 +90,7 @@ export default function Materia_Usuario() {
               color: "#000",
             }}
           >
-            {nomeMateria || "CARREGANDO MATÉRIA..."}
+            {nomeMateria || "A CARREGAR MATÉRIA..."}
           </h1>
           <p style={{ color: "#666", fontSize: "16px" }}>
             Selecione um pacote abaixo para iniciar os exercícios.
@@ -105,7 +99,7 @@ export default function Materia_Usuario() {
 
         <h2>Pacotes Disponíveis</h2>
 
-        {carregando && <p className="status-mensagem">Carregando...</p>}
+        {carregando && <p className="status-mensagem">A carregar...</p>}
         {erro && <p className="status-mensagem erro">Erro: {erro}</p>}
 
         {!carregando && !erro && pacotes.length === 0 && (

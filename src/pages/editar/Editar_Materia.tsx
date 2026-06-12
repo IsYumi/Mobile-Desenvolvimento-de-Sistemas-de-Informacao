@@ -1,7 +1,10 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
-import "../styles/Editar_Materia.css";
+import "../../styles/Editar_Materia.css";
+
+// Importa as funções de Update e Delete do Firestore
+import { update, remove } from "../../service/firestoreService";
 
 export default function Editar_Materia() {
   const navigate = useNavigate();
@@ -13,67 +16,70 @@ export default function Editar_Materia() {
   const [imagem, setImagem] = useState("");
   const [imagemNome, setImagemNome] = useState("");
 
-  const buttonAdicionarMateria = async () => {
+  const [loading, setLoading] = useState(false);
+
+  const buttonEditarMateria = async () => {
+    if (!id) {
+      alert("Por favor, informe o ID da matéria que deseja editar.");
+      return;
+    }
+
     try {
-      const resposta = await fetch("http://localhost:3333/materia/update", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: id,
-          nome: nome,
-          descricao: descricao,
-          imagem_caminho: imagem,
-        }),
+      setLoading(true);
+
+      // Atualiza o documento na coleção "materias" onde o documento = id
+      await update("materias", id, {
+        nome: nome,
+        descricao: descricao,
+        imagem_caminho: imagem,
+        dataAtualizacao: new Date().toISOString(), // Opcional, bom para auditoria
       });
 
-      if (!resposta.ok) {
-        const erro = await resposta.text();
-        console.error("Erro ao alterar materia:", resposta.status, erro);
-        return;
-      }
-
-      const data = await resposta.json();
-      console.log("Materia alterado:", data);
+      console.log("Matéria alterada:", id);
       setNome("");
       setDescricao("");
       setImagem("");
       setImagemNome("");
-      alert("Materia alterado com sucesso!");
+      // Não limpamos o ID para caso o usuário queira deletar logo em seguida
+      alert("Matéria alterada com sucesso!");
     } catch (error) {
-      console.error("Erro ao alterar materia:", error);
+      console.error("Erro ao alterar matéria:", error);
+      alert("Erro ao alterar a matéria. Verifique se o ID está correto.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const buttondeletarMateria = async () => {
-    try {
-      const resposta = await fetch("http://localhost:3333/materia/delete", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: id,
-        }),
-      });
+  const buttonDeletarMateria = async () => {
+    if (!id) {
+      alert("Por favor, informe o ID da matéria que deseja deletar.");
+      return;
+    }
 
-      if (!resposta.ok) {
-        const erro = await resposta.text();
-        console.error("Erro ao deletar materia:", resposta.status, erro);
-        return;
+    if (
+      window.confirm(
+        "Tem certeza que deseja DELETAR esta matéria permanentemente?",
+      )
+    ) {
+      try {
+        setLoading(true);
+
+        // Remove o documento da coleção "materias"
+        await remove("materias", id);
+
+        console.log("Matéria deletada:", id);
+        setId("");
+        setNome("");
+        setDescricao("");
+        setImagem("");
+        setImagemNome("");
+        alert("Matéria deletada com sucesso!");
+      } catch (error) {
+        console.error("Erro ao deletar matéria:", error);
+        alert("Erro ao deletar. Verifique se o ID está correto.");
+      } finally {
+        setLoading(false);
       }
-
-      const data = await resposta.json();
-      console.log("Materia deletado:", data);
-      setId("");
-      setNome("");
-      setDescricao("");
-      setImagem("");
-      setImagemNome("");
-      alert("Materia deletado com sucesso!");
-    } catch (error) {
-      console.error("Erro ao deletar materia:", error);
     }
   };
 
@@ -83,6 +89,7 @@ export default function Editar_Materia() {
 
   const handleImagemChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+
     if (file) {
       setImagem(file.name);
       setImagemNome(file.name);
@@ -94,7 +101,7 @@ export default function Editar_Materia() {
       <Navbar />
       <div className="materia-container">
         <div className="materia-header">
-          <h1 className="materia-title">EDITAR MATERIA</h1>
+          <h1 className="materia-title">EDITAR MATÉRIA</h1>
           <button className="btn-voltar" onClick={() => navigate(-1)}>
             VOLTAR
           </button>
@@ -107,16 +114,19 @@ export default function Editar_Materia() {
               type="text"
               value={id}
               onChange={(e) => setId(e.target.value)}
-              placeholder="ID do materia"
+              placeholder="ID da matéria (Gerado no Firebase)"
+              disabled={loading}
             />
           </div>
+
           <div className="field-group">
             <label>NOME</label>
             <input
               type="text"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              placeholder="Nome da matéria"
+              placeholder="Novo nome da matéria"
+              disabled={loading}
             />
           </div>
 
@@ -125,7 +135,8 @@ export default function Editar_Materia() {
             <textarea
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Descrição breve"
+              placeholder="Nova descrição"
+              disabled={loading}
             />
           </div>
 
@@ -136,6 +147,7 @@ export default function Editar_Materia() {
                 type="button"
                 className="image-select-button"
                 onClick={handleSelectImage}
+                disabled={loading}
               >
                 INSERIR IMAGEM
               </button>
@@ -151,13 +163,18 @@ export default function Editar_Materia() {
           </div>
 
           <div className="confirm-button-row">
-            <button className="btn-confirmar" onClick={buttonAdicionarMateria}>
-              CONFIRMAR
+            <button
+              className="btn-confirmar"
+              onClick={buttonEditarMateria}
+              disabled={loading}
+            >
+              {loading ? "PROCESSANDO..." : "CONFIRMAR"}
             </button>
             <button
               className="btn-deletar"
               type="button"
-              onClick={buttondeletarMateria}
+              onClick={buttonDeletarMateria}
+              disabled={loading}
             >
               DELETAR
             </button>
