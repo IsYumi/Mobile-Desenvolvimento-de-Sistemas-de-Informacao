@@ -4,9 +4,18 @@ import boy from "../assets/student_boy.gif";
 import girl from "../assets/student_girl.gif";
 import "../styles/BoasVindas.css";
 
+import { auth } from "../service/firebaseConfig";
+import { getUserProfile } from "../service/firestoreService";
+
+// 1. AVISAMOS AO TYPESCRIPT O QUE VEM DO FIREBASE
+interface DadosUsuario {
+  id?: string;
+  nome?: string;
+  genero?: string;
+}
+
 export default function BoasVindas() {
   const navigate = useNavigate();
-
   const [nome, setNome] = useState("Usuário");
   const [genero, setGenero] = useState("masculino");
   const [imagem, setImagem] = useState(boy);
@@ -17,7 +26,6 @@ export default function BoasVindas() {
     } else if (generoUsuario === "M") {
       return boy;
     } else {
-      // Qualquer outro valor (prefiro não informar, etc) escolhe aleatoriamente
       return Math.random() > 0.5 ? girl : boy;
     }
   };
@@ -25,26 +33,24 @@ export default function BoasVindas() {
   useEffect(() => {
     async function buscarDados() {
       try {
-        const resposta = await fetch("http://localhost:3333/user/name", {
-          method: "GET",
-          credentials: "include",
-        });
+        const currentUser = auth.currentUser;
 
-        if (!resposta.ok) {
-          throw new Error("Erro na API");
+        if (!currentUser) {
+          throw new Error("Nenhum usuário logado");
         }
 
-        const dados = await resposta.json();
+        // 2. FORÇAMOS O TYPESCRIPT A ENTENDER O FORMATO DOS DADOS
+        const dados = (await getUserProfile(currentUser.uid)) as DadosUsuario;
+
         setNome(dados.nome || "Usuário");
 
-        // Se a API retorna o gênero, usa; caso contrário, tenta buscar separadamente
         if (dados.genero) {
           const imagemSelecionada = selecionarImagem(dados.genero);
           setGenero(dados.genero);
           setImagem(imagemSelecionada);
         }
       } catch (erro) {
-        console.error("Erro ao buscar nome:", erro);
+        console.error("Erro ao buscar dados do Firebase:", erro);
       }
     }
 

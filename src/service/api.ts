@@ -1,35 +1,29 @@
-const BASE_URL = "http://localhost:3333";
+// src/service/firestoreService.ts
+import {
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+} from "firebase/firestore";
+import { db } from "./firebaseConfig"; // O arquivo que você já tem
 
-export async function apiPost<T>(rota: string, dados: unknown): Promise<T> {
-  const resposta = await fetch(`${BASE_URL}${rota}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(dados),
-  });
+// Exemplo: Buscar dados do usuário (Substitui o GET de /user/name)
+export async function getUserProfile(uid: string) {
+  const docRef = doc(db, "users", uid);
+  const docSnap = await getDoc(docRef);
 
-  const json = await resposta.json().catch(() => ({}));
-
-  if (!resposta.ok) {
-    const mensagem = (json as any)?.mensagem ?? "Erro na requisição";
-    throw new Error(mensagem);
+  if (docSnap.exists()) {
+    return docSnap.data();
+  } else {
+    throw new Error("Usuário não encontrado");
   }
-
-  return json as T;
 }
 
-export async function apiGet<T>(rota: string): Promise<T> {
-  const resposta = await fetch(`${BASE_URL}${rota}`, {
-    method: "GET",
-    credentials: "include",
-  });
-
-  const json = await resposta.json().catch(() => ({}));
-
-  if (!resposta.ok) {
-    const mensagem = (json as any)?.mensagem ?? "Erro na requisição";
-    throw new Error(mensagem);
-  }
-
-  return json as T;
+// Exemplo: Criar ou atualizar um documento genérico (Substitui o apiPost)
+export async function salvarDados(colecao: string, id: string, dados: any) {
+  const docRef = doc(db, colecao, id);
+  await setDoc(docRef, dados, { merge: true });
 }
