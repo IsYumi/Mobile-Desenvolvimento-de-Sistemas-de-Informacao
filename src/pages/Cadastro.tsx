@@ -1,209 +1,153 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { cadastrar } from "../service/authService";
-import "../styles/cadastro.css";
+import { useNavigate, Link } from "react-router-dom";
+import { cadastrarFirebase } from "../service/authService";
+import "../styles/Login.css";
 
 export default function Cadastro() {
   const navigate = useNavigate();
 
+  // Estados para os campos do formulário
   const [nome, setNome] = useState("");
-  const [sobrenome, setSobrenome] = useState("");
-  const [genero, setGenero] = useState("");
-  const [telefone, setTelefone] = useState("");
   const [email, setEmail] = useState("");
-  const [confirmarEmail, setConfirmarEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [confirmarSenha, setConfirmarSenha] = useState("");
-  const [aceitouTermos, setAceitouTermos] = useState(false); // 👈 corrigido
+  const [genero, setGenero] = useState("M");
 
-  const [mensagem, setMensagem] = useState("");
+  // Estados de controle da interface
+  const [erro, setErro] = useState("");
+  const [carregando, setCarregando] = useState(false);
 
-  function validarEmail(email: string) {
-    return /\S+@\S+\.\S+/.test(email);
-  }
-
-  async function handleCadastro(e: React.FormEvent) {
+  const handleCadastro = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMensagem("");
+    setErro("");
 
-    if (!nome || !email || !senha) {
-      setMensagem("Preencha os campos obrigatórios.");
-      return;
-    }
-
-    if (email !== confirmarEmail) {
-      setMensagem("Os e-mails não coincidem.");
-      return;
-    }
-
-    if (senha !== confirmarSenha) {
-      setMensagem("As senhas não coincidem.");
-      return;
-    }
-
-    if (!validarEmail(email)) {
-      setMensagem("E-mail inválido.");
-      return;
-    }
-
-    if (senha.length < 6) {
-      setMensagem("A senha deve ter no mínimo 6 caracteres.");
-      return;
-    }
-
-    if (genero === "") {
-      setMensagem("Selecione um gênero.");
-      return;
-    }
-
-    if (!aceitouTermos) {
-      setMensagem("Você deve aceitar os termos.");
+    // Validação básica
+    if (!nome || !email || !senha || !genero) {
+      setErro("Por favor, preencha todos os campos.");
       return;
     }
 
     try {
-      const resposta = await cadastrar(
-        nome,
-        sobrenome,
-        email,
-        senha,
-        genero,
-        telefone,
-      );
+      setCarregando(true);
 
-      if (resposta.ok) {
-        navigate("/login");
+      // Chama a função do Firebase que cria a conta e salva os dados no Firestore
+      await cadastrarFirebase(email, senha, nome, genero);
+
+      // O Firebase Auth faz login automaticamente após o cadastro.
+      // Redirecionamos direto para as Boas Vindas.
+      navigate("/boasvindas");
+    } catch (error: any) {
+      console.error("Erro no cadastro:", error);
+
+      // Tratamento de erros comuns do Firebase
+      if (error.code === "auth/email-already-in-use") {
+        setErro("Este e-mail já está em uso.");
+      } else if (error.code === "auth/weak-password") {
+        setErro("A senha deve ter pelo menos 6 caracteres.");
+      } else if (error.code === "auth/invalid-email") {
+        setErro("O formato do e-mail é inválido.");
       } else {
-        setMensagem(resposta.mensagem || "Erro ao cadastrar");
+        setErro("Erro ao cadastrar. Tente novamente.");
       }
-    } catch (erro) {
-      setMensagem("Erro ao cadastrar");
+    } finally {
+      setCarregando(false);
     }
-  }
-
-  function irParaLogin() {
-    navigate("/login");
-  }
+  };
 
   return (
-    <div className="cadastro-container">
-      <button className="btn-voltar" onClick={() => navigate("/")}>
-        VOLTAR
-      </button>
+    <div className="login-container">
+      <div className="login-left">
+        <h1 className="titulo-login">CADASTRO</h1>
 
-      <h1 className="titulo">CRIAR CONTA</h1>
+        {/* Exibição de Erros */}
+        {erro && (
+          <div
+            style={{
+              color: "#d93025",
+              fontWeight: "bold",
+              marginBottom: "15px",
+            }}
+          >
+            {erro}
+          </div>
+        )}
 
-      <form onSubmit={handleCadastro} className="formulario">
-        {/* COLUNA ESQUERDA */}
-        <div className="coluna">
-          <label>NOME</label>
-          <input value={nome} onChange={(e) => setNome(e.target.value)} />
-
-          <label>GÊNERO</label>
-          <div className="genero">
-            <label>
-              <input
-                type="radio"
-                name="genero"
-                onChange={() => setGenero("F")}
-              />
-              FEMININO
-            </label>
-
-            <label>
-              <input
-                type="radio"
-                name="genero"
-                onChange={() => setGenero("M")}
-              />
-              MASCULINO
-            </label>
-
-            <label>
-              <input
-                type="radio"
-                name="genero"
-                onChange={() => setGenero("N")}
-              />
-              NÃO INFORMAR
-            </label>
+        <form onSubmit={handleCadastro}>
+          <div className="form-group">
+            <label>NOME COMPLETO</label>
+            <input
+              type="text"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Digite seu nome"
+            />
           </div>
 
-          <label>E-MAIL</label>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} />
+          <div className="form-group">
+            <label>E-MAIL</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Digite seu e-mail"
+            />
+          </div>
 
-          <label>SENHA</label>
-          <input
-            type="senha"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-          />
-        </div>
+          <div className="form-group">
+            <label>SENHA</label>
+            <input
+              type="password"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              placeholder="Crie uma senha forte"
+            />
+          </div>
 
-        {/* COLUNA DIREITA */}
-        <div className="coluna">
-          <label>SOBRENOME</label>
-          <input
-            value={sobrenome}
-            onChange={(e) => setSobrenome(e.target.value)}
-          />
+          <div className="form-group">
+            <label>GÊNERO</label>
+            {/* Select estilizado com os mesmos padrões do input no Login.css */}
+            <select
+              value={genero}
+              onChange={(e) => setGenero(e.target.value)}
+              style={{
+                display: "block",
+                marginTop: "8px",
+                width: "348px",
+                padding: "12px",
+                borderRadius: "12px",
+                border: "solid 1.5px",
+                background: "#d9d7d7c9",
+                outline: "none",
+                marginBottom: "18px",
+                color: "#000",
+                cursor: "pointer",
+              }}
+            >
+              <option value="M">Masculino</option>
+              <option value="F">Feminino</option>
+              <option value="Outro">Prefiro não informar</option>
+            </select>
+          </div>
 
-          <label>TELEFONE</label>
-          <input
-            value={telefone}
-            onChange={(e) => setTelefone(e.target.value)}
-          />
+          <button type="submit" className="btn-login" disabled={carregando}>
+            {carregando ? "CADASTRANDO..." : "CADASTRAR"}
+          </button>
+        </form>
 
-          <label>CONFIRMAR E-MAIL</label>
-          <input
-            value={confirmarEmail}
-            onChange={(e) => setConfirmarEmail(e.target.value)}
-          />
-
-          <label>CONFIRMAR SENHA</label>
-          <input
-            type="senha"
-            value={confirmarSenha}
-            onChange={(e) => setConfirmarSenha(e.target.value)}
-          />
-        </div>
-      </form>
-
-      {/* CHECKBOX */}
-      <div className="checkbox-area">
-        <div className="checkbox-item">
-          <input
-            type="checkbox"
-            id="termos"
-            checked={aceitouTermos}
-            onChange={(e) => setAceitouTermos(e.target.checked)}
-          />
-          <label htmlFor="termos">Li e aceito os termos</label>
-        </div>
-
-        <div className="checkbox-item">
-          <input type="checkbox" id="dicas" />
-          <label htmlFor="dicas">
-            Aceito receber dicas de estudo, conteúdos exclusivos e promoções
-          </label>
-        </div>
+        <Link
+          to="/login"
+          className="link-senha"
+          style={{ marginTop: "20px", display: "inline-block" }}
+        >
+          Já tem uma conta? Faça Login
+        </Link>
       </div>
 
-      {mensagem && <p className="erro">{mensagem}</p>}
-
-      {/* BOTÕES */}
-      <div className="botoes-container">
-        <button className="btn-confirmar" onClick={handleCadastro}>
-          CONFIRMAR
-        </button>
-
-        <button className="btn-login" onClick={irParaLogin}>
-          LOGIN
-        </button>
+      <div className="login-right">
+        {/* Mantendo o lado direito com um fundo sólido, ou você pode adicionar a tag <img> como no Login */}
+        <div
+          style={{ width: "100%", height: "100%", background: "#7fb4b2" }}
+        ></div>
       </div>
-
-      {/* MONSTRINHO */}
-      <img src="/monster_1.gif" alt="monstro" className="monster" />
     </div>
   );
 }

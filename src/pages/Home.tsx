@@ -1,20 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import { apiGet } from "../service/api";
+
+// Importamos a função do nosso serviço centralizado do Firestore
+import { listarMaterias } from "../service/firestoreService";
 import ursoGif from "../assets/urso.gif";
 import "../styles/Home.css";
 
+// O ID no Firebase é uma string
 interface Materia {
-  id: number;
+  id: string;
   nome: string;
   descricao?: string;
-}
-
-interface RespostaMaterias {
-  ok: boolean;
-  materias?: Materia[];
-  mensagem?: string;
 }
 
 export default function Home() {
@@ -30,18 +27,14 @@ export default function Home() {
         setCarregando(true);
         setErro(null);
 
-        // Chamada para a API buscar todas as matérias
-        const dados = await apiGet<RespostaMaterias>("/materia/list");
+        // Chamada direta para o Firestore
+        const dados = await listarMaterias();
 
-        if (dados && dados.ok) {
-          setMaterias(dados.materias || []);
-        } else {
-          throw new Error(
-            dados?.mensagem || "Ocorreu um erro ao carregar as matérias.",
-          );
-        }
+        // Como criamos a função listarMaterias(), ela já retorna o array formatado
+        setMaterias(dados as Materia[]);
       } catch (err: any) {
-        setErro(err.message || "Não foi possível carregar as matérias.");
+        console.error("Erro ao buscar matérias no Firebase:", err);
+        setErro("Não foi possível carregar as matérias.");
       } finally {
         setCarregando(false);
       }

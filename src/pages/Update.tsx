@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 import logoPag from "../assets/logo_pag.png";
 import "../styles/Update.css";
 
+// Importações do Firebase
+import { auth } from "../service/firebaseConfig";
+import { signOut, deleteUser } from "firebase/auth";
+import { getUserProfile, update, remove } from "../service/firestoreService";
+
 export default function Update() {
   const navigate = useNavigate();
 
@@ -16,35 +21,34 @@ export default function Update() {
 
   const [loading, setLoading] = useState(true);
 
+  // 1. BUSCAR DADOS DO FIRESTORE
   useEffect(() => {
     async function buscarPerfil() {
       try {
-        const resposta = await fetch("http://localhost:3333/user/name", {
-          method: "GET",
-          credentials: "include",
-        });
-
-        if (!resposta.ok) {
-          throw new Error("Erro ao buscar perfil");
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          navigate("/login");
+          return;
         }
 
-        const dados = await resposta.json();
+        const dados: any = await getUserProfile(currentUser.uid);
+
         setPerfil({
           nome: dados.nome || "",
           sobrenome: dados.sobrenome || "",
-          email: dados.email || "",
+          email: dados.email || currentUser.email || "",
           telefone: dados.telefone || "",
           genero: dados.genero || "",
         });
       } catch (erro) {
-        console.error("Erro ao buscar perfil:", erro);
+        console.error("Erro ao buscar perfil no Firebase:", erro);
       } finally {
         setLoading(false);
       }
     }
 
     buscarPerfil();
-  }, []);
+  }, [navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -55,29 +59,22 @@ export default function Update() {
     setPerfil({ ...perfil, genero: e.target.value });
   };
 
+  // 2. ATUALIZAR DADOS NO FIRESTORE
   const handleEditarInformacoes = async () => {
     try {
-      const resposta = await fetch("http://localhost:3333/user/update", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(perfil),
-      });
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
 
-      const resultado = await resposta.json();
-      if (resultado.ok) {
-        alert("Informações atualizadas com sucesso!");
-      } else {
-        alert(resultado.mensagem || "Erro ao atualizar");
-      }
+      // Chama a função genérica de update passando a coleção "users"
+      await update("users", currentUser.uid, perfil);
+      alert("Informações atualizadas com sucesso!");
     } catch (erro) {
       console.error("Erro ao atualizar:", erro);
       alert("Erro ao atualizar informações");
     }
   };
 
+  // 3. DELETAR CONTA (Firestore + Auth)
   const handleDeletarConta = async () => {
     if (
       window.confirm(
@@ -85,40 +82,36 @@ export default function Update() {
       )
     ) {
       try {
-        const resposta = await fetch("http://localhost:3333/user/delete", {
-          method: "DELETE",
-          credentials: "include",
-        });
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
 
-        const resultado = await resposta.json();
-        if (resultado.ok) {
-          alert("Conta deletada com sucesso!");
-          navigate("/login");
-        } else {
-          alert(resultado.mensagem || "Erro ao deletar conta");
-        }
-      } catch (erro) {
+        // Primeiro, apaga o documento do usuário no banco de dados (Firestore)
+        await remove("users", currentUser.uid);
+
+        // Depois, exclui o usuário da Autenticação do Firebase
+        await deleteUser(currentUser);
+
+        alert("Conta deletada com sucesso!");
+        navigate("/login");
+      } catch (erro: any) {
         console.error("Erro ao deletar:", erro);
-        alert("Erro ao deletar conta");
+        // O Firebase exige login recente para deletar a conta por segurança
+        if (erro.code === "auth/requires-recent-login") {
+          alert(
+            "Para deletar a conta, você precisa ter feito login recentemente. Por favor, saia, entre novamente e repita a ação.",
+          );
+        } else {
+          alert("Erro ao deletar conta");
+        }
       }
     }
   };
 
+  // 4. FAZER LOGOUT
   const handleLogout = async () => {
     try {
-      const resposta = await fetch("http://localhost:3333/user/logout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
-      const resultado = await resposta.json();
-      if (resultado.ok) {
-        alert("Logout realizado com sucesso!");
-      } else {
-        alert(resultado.mensagem || "Erro ao fazer logout");
-      }
+      await signOut(auth); // Desloga do Firebase
+      alert("Logout realizado com sucesso!");
       navigate("/login");
     } catch (erro) {
       console.error("Erro ao fazer logout:", erro);
@@ -203,6 +196,8 @@ export default function Update() {
                 name="email"
                 value={perfil.email}
                 onChange={handleInputChange}
+                disabled // Desabilitado por segurança (mudança de email no Firebase requer verificação)
+                style={{ cursor: "not-allowed", backgroundColor: "#e9ecef" }}
               />
             </div>
           </div>
@@ -235,7 +230,7 @@ export default function Update() {
                   type="radio"
                   name="genero"
                   value="O"
-                  checked={perfil.genero === "O"}
+                  checked={perfil.genero === "O" || perfil.genero === "Outro"}
                   onChange={handleGeneroChange}
                 />
                 NÃO INFORMAR

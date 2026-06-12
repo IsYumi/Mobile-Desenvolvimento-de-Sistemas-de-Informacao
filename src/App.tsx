@@ -6,16 +6,16 @@ import BoasVindas from "./pages/BoasVindas";
 import Home from "./pages/Home";
 import Update from "./pages/Update";
 import Perfil from "./pages/Perfil";
-import Materia from "./pages/Materia";
-import Editar_Materia from "./pages/Editar_Materia";
-import Pacote from "./pages/Pacote";
-import Exercicio from "./pages/Exercicio";
-import Editar_Pacote from "./pages/Editar_Pacote";
+import Materia from "./pages/adicionar/Materia";
+import Editar_Materia from "./pages/editar/Editar_Materia";
+import Pacote from "./pages/adicionar/Pacote";
+import Exercicio from "./pages/adicionar/Exercicio";
+import Editar_Pacote from "./pages/editar/Editar_Pacote";
 import Assinatura from "./pages/Assinatura";
-import Editar_Exercicio from "./pages/Editar_Exercicio";
-import Materia_Usuario from "./pages/Materia_Lista";
-import Pacote_Lista from "./pages/Pacote_Lista";
-import Exercicio_Fazer from "./pages/Exercicio_Fazer";
+import Editar_Exercicio from "./pages/editar/Editar_Exercicio";
+import Materia_Usuario from "./pages/listar/Materia_Lista";
+import Pacote_Lista from "./pages/listar/Pacote_Lista";
+import Exercicio_Fazer from "./pages/listar/Exercicio_Fazer";
 
 export default function App() {
   return (

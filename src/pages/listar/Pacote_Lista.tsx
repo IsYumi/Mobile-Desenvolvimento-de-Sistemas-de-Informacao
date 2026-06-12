@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../styles/Pacote_Lista.css";
-import Navbar from "../components/Navbar";
-import { apiGet } from "../service/api";
+import Navbar from "../../components/Navbar";
+import { apiGet } from "../../service/api";
 
 interface Exercicio {
   id: number;

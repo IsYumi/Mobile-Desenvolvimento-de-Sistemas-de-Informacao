@@ -1,32 +1,28 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import "../styles/Editar_Pacote.css";
+import Navbar from "../../components/Navbar";
+import "../styles/Editar_Materia.css";
 
-export default function Editar_Pacote() {
+export default function Editar_Materia() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [id, setId] = useState("");
   const [nome, setNome] = useState("");
-  const [topico, setTopico] = useState("");
-  const [nivel, setNivel] = useState("Básico");
   const [descricao, setDescricao] = useState("");
   const [imagem, setImagem] = useState("");
   const [imagemNome, setImagemNome] = useState("");
-  const [questao, setQuestao] = useState("");
 
-  const buttonAdicionarPacote = async () => {
+  const buttonAdicionarMateria = async () => {
     try {
-      const resposta = await fetch("http://localhost:3333/pacote/update", {
+      const resposta = await fetch("http://localhost:3333/materia/update", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           id: id,
-          materia_id: nome,
-          nome: topico,
+          nome: nome,
           descricao: descricao,
           imagem_caminho: imagem,
         }),
@@ -34,28 +30,25 @@ export default function Editar_Pacote() {
 
       if (!resposta.ok) {
         const erro = await resposta.text();
-        console.error("Erro ao alterar pacote:", resposta.status, erro);
+        console.error("Erro ao alterar materia:", resposta.status, erro);
         return;
       }
 
       const data = await resposta.json();
-      console.log("Pacote alterado:", data);
+      console.log("Materia alterado:", data);
       setNome("");
-      setTopico("");
-      setNivel("Básico");
       setDescricao("");
       setImagem("");
       setImagemNome("");
-      setQuestao("");
-      alert("Pacote alterado com sucesso!");
+      alert("Materia alterado com sucesso!");
     } catch (error) {
-      console.error("Erro ao alterar pacote:", error);
+      console.error("Erro ao alterar materia:", error);
     }
   };
 
-  const buttondeletarPacote = async () => {
+  const buttondeletarMateria = async () => {
     try {
-      const resposta = await fetch("http://localhost:3333/pacote/delete", {
+      const resposta = await fetch("http://localhost:3333/materia/delete", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -67,23 +60,20 @@ export default function Editar_Pacote() {
 
       if (!resposta.ok) {
         const erro = await resposta.text();
-        console.error("Erro ao deletar pacote:", resposta.status, erro);
+        console.error("Erro ao deletar materia:", resposta.status, erro);
         return;
       }
 
       const data = await resposta.json();
-      console.log("Pacote deletado:", data);
+      console.log("Materia deletado:", data);
       setId("");
       setNome("");
-      setTopico("");
-      setNivel("Básico");
       setDescricao("");
       setImagem("");
       setImagemNome("");
-      setQuestao("");
-      alert("Pacote deletado com sucesso!");
+      alert("Materia deletado com sucesso!");
     } catch (error) {
-      console.error("Erro ao deletar pacote:", error);
+      console.error("Erro ao deletar materia:", error);
     }
   };
 
@@ -104,7 +94,7 @@ export default function Editar_Pacote() {
       <Navbar />
       <div className="materia-container">
         <div className="materia-header">
-          <h1 className="materia-title">EDITAR PACOTE</h1>
+          <h1 className="materia-title">EDITAR MATERIA</h1>
           <button className="btn-voltar" onClick={() => navigate(-1)}>
             VOLTAR
           </button>
@@ -117,7 +107,7 @@ export default function Editar_Pacote() {
               type="text"
               value={id}
               onChange={(e) => setId(e.target.value)}
-              placeholder="ID do pacote"
+              placeholder="ID do materia"
             />
           </div>
           <div className="field-group">
@@ -126,60 +116,13 @@ export default function Editar_Pacote() {
               type="text"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              placeholder="Id da matéria"
+              placeholder="Nome da matéria"
             />
           </div>
 
-          <div className="field-group">
-            <label>TÓPICO</label>
-            <input
-              type="text"
-              value={topico}
-              onChange={(e) => setTopico(e.target.value)}
-              placeholder="nome da matéria"
-            />
-          </div>
-
-          <div className="field-group">
-            <label>NÍVEL</label>
-            <div className="radio-group">
-              <label>
-                <input
-                  type="radio"
-                  name="nivel"
-                  value="Básico"
-                  checked={nivel === "Básico"}
-                  onChange={() => setNivel("Básico")}
-                />
-                BÁSICO
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="nivel"
-                  value="Intermediário"
-                  checked={nivel === "Intermediário"}
-                  onChange={() => setNivel("Intermediário")}
-                />
-                INTERMEDIÁRIO
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="nivel"
-                  value="Avançado"
-                  checked={nivel === "Avançado"}
-                  onChange={() => setNivel("Avançado")}
-                />
-                AVANÇADO
-              </label>
-            </div>
-          </div>
-
-          <div className="field-group">
+          <div className="text-area-group field-group">
             <label>DESCRIÇÃO</label>
-            <input
-              type="text"
+            <textarea
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
               placeholder="Descrição breve"
@@ -207,23 +150,14 @@ export default function Editar_Pacote() {
             />
           </div>
 
-          <div className="text-area-group field-group">
-            <label>DESCRIÇÃO</label>
-            <textarea
-              value={questao}
-              onChange={(e) => setQuestao(e.target.value)}
-              placeholder="Descreva a questão ou atividade"
-            />
-          </div>
-
           <div className="confirm-button-row">
-            <button className="btn-confirmar" onClick={buttonAdicionarPacote}>
+            <button className="btn-confirmar" onClick={buttonAdicionarMateria}>
               CONFIRMAR
             </button>
             <button
               className="btn-deletar"
               type="button"
-              onClick={buttondeletarPacote}
+              onClick={buttondeletarMateria}
             >
               DELETAR
             </button>
