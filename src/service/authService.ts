@@ -1,35 +1,13 @@
-import { apiPost } from "./api";
+import { auth } from "./firebaseConfig";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 
-export type RespostaPadrao = {
-  ok: boolean;
-  token?: string;
-  mensagem?: string;
-};
-
-export async function cadastrar(
-  nome: string,
-  sobrenome: string,
-  email: string,
-  senha: string,
-  genero: string,
-  telefone: string,
-) {
-  return apiPost<RespostaPadrao>("/user/", {
-    nome,
-    sobrenome,
-    email,
-    senha,
-    genero,
-    telefone,
-  });
+export async function cadastrarFirebase(email: string, senha: string) {
+  return await createUserWithEmailAndPassword(auth, email, senha);
 }
 
-// passo A: valida email/senha e dispara OTP (no futuro via EmailJS)
-export async function iniciarLogin(email: string, senha: string) {
-  return apiPost<RespostaPadrao>("/auth/", { email, senha });
-}
-
-// passo B: valida OTP
-export async function validarOtp(email: string, codigo: string) {
-  return apiPost<RespostaPadrao>("/auth/verificar-otp/", { email, codigo });
+export async function loginFirebase(email: string, senha: string) {
+  return await signInWithEmailAndPassword(auth, email, senha);
 }
